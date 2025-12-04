@@ -1,0 +1,46 @@
+[
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "vpc-09f25c9609ae0142c"
+  },
+  {
+    "ParameterKey": "PublicSubnetId",
+    "ParameterValue": "subnet-0c38193279cb2f1b9"
+  },
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": "LINUX-KEY-PAIR"
+  },
+  {
+    "ParameterKey": "WebServerSG",
+    "ParameterValue": "sg-0e307f6ff5b6fac37"
+  },
+  {
+    "ParameterKey": "AppServerSG",
+    "ParameterValue": "sg-0f25058522f44c69f"
+  },
+  {
+    "ParameterKey": "WebServerName",
+    "ParameterValue": "New-Webserver"
+  },
+  {
+    "ParameterKey": "AppServerName",
+    "ParameterValue": "New-Appserver"
+  },
+  {
+    "ParameterKey": "WebServerAmi",
+    "ParameterValue": "ami-0f254a21287f6d2cd"
+  },
+  {
+    "ParameterKey": "AppServerAmi",
+    "ParameterValue": "ami-0dedeef973816516e"
+  },
+  {
+    "ParameterKey": "InstanceType",
+    "ParameterValue": "t2.micro"
+  },
+  {
+    "ParameterKey": "SourceS3Bucket",
+    "ParameterValue": "akshay-test-pqr12"
+  }
+]

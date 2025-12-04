@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  EC2 Web App Deployment — WebServer + AppServer in Public Subnet
+  All major attributes made as parameters.
+
+# ---------------------------------------------------------
+# PARAMETERS
+# ---------------------------------------------------------
+Parameters:
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Existing VPC ID
+
+  PublicSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public Subnet ID for both EC2 instances
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 Key Pair Name
+
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Existing Security Group ID for Web Server
+
+  AppServerSG:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Existing Security Group ID for App Server
+
+  WebServerName:
+    Type: String
+    Default: WebServer
+
+  AppServerName:
+    Type: String
+    Default: AppServer
+
+  WebServerAmi:
+    Type: AWS::EC2::Image::Id
+    Description: AMI ID for Web Server instance
+
+  AppServerAmi:
+    Type: AWS::EC2::Image::Id
+    Description: AMI ID for App Server instance
+
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues: [t2.micro, t3.micro, t3.small, t3.medium]
+
+  SourceS3Bucket:
+    Type: String
+    Description: S3 BucketName for CodePipeline Source (Parameter only)
+
+# ---------------------------------------------------------
+# IAM Instance Profile for App Server
+# ---------------------------------------------------------
+Resources:
+
+  AppServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess
+      Path: "/"
+
+  AppServerInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref AppServerRole
+
+# ---------------------------------------------------------
+# APP SERVER (Backend)
+# ---------------------------------------------------------
+  AppServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SubnetId: !Ref PublicSubnetId
+      SecurityGroupIds:
+        - !Ref AppServerSG
+      ImageId: !Ref AppServerAmi
+      IamInstanceProfile: !Ref AppServerInstanceProfile
+      Tags:
+        - Key: Name
+          Value: !Ref AppServerName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          hostnamectl set-hostname ${AppServerName}
+          export DEBIAN_FRONTEND=noninteractive
+
+# ---------------------------------------------------------
+# WEB SERVER (Frontend)
+# ---------------------------------------------------------
+  WebServerInstance:
+    Type: AWS::EC2::Instance
+    DependsOn: AppServerInstance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SubnetId: !Ref PublicSubnetId
+      SecurityGroupIds:
+        - !Ref WebServerSG
+      ImageId: !Ref WebServerAmi
+      Tags:
+        - Key: Name
+          Value: !Ref WebServerName
+      UserData:
+        Fn::Base64: !Sub
+          - |
+              #!/bin/bash -xe
+              hostnamectl set-hostname ${WebServerName}
+              export DEBIAN_FRONTEND=noninteractive
+
+              sleep 10
+
+              # Add AppServer hostname to /etc/hosts
+              echo "${AppServerPrivateIP} login-be-service" >> /etc/hosts
+
+              systemctl enable nginx || true
+              nginx -t && systemctl restart nginx || true
+          - { AppServerPrivateIP: !GetAtt AppServerInstance.PrivateIp }
+
+# ---------------------------------------------------------
+# OUTPUTS
+# ---------------------------------------------------------
+Outputs:
+  WebServerPublicIP:
+    Description: Public IP of Web Server
+    Value: !GetAtt WebServerInstance.PublicIp
+
+  AppServerPrivateIP:
+    Description: Private backend IP
+    Value: !GetAtt AppServerInstance.PrivateIp
