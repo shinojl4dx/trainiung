@@ -9,5 +9,5 @@ aws cloudformation deploy \
   --stack-name jenkisnTestStack \
   --parameter-overrides file://parameter.json \
   --capabilities CAPABILITY_NAMED_IAM
-
+echo "Fired the CFT command"
 echo "Deployment complete!"
